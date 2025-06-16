@@ -15,16 +15,27 @@ export enum Paren {
   CLOSE = ")",
 }
 
-type Token = {
-  type: TokenType;
-  value: number | Op | Paren;
+type NumberToken = {
+  type: TokenType.NUMBER;
+  value: string;
 };
+
+type OperatorToken = {
+  type: TokenType.OPERATOR;
+  value: Op;
+};
+
+type ParenToken = {
+  type: TokenType.PAREN;
+  value: Paren;
+};
+
+type Token = NumberToken | OperatorToken | ParenToken;
 
 type Tokens = Array<Token>;
 
 export function lexer(input: string): Tokens {
   let position: number = 0;
-  let lastToken: TokenType | undefined;
   const stack: Tokens = [];
   const parens: Array<Paren> = [];
 
@@ -32,27 +43,23 @@ export function lexer(input: string): Tokens {
     let char = input[position];
 
     if (/\s/.test(char)) {
-      // space
-    } else if (/\d/.test(char)) {
-      if (lastToken === TokenType.NUMBER) {
-        stack[stack.length - 1].value =
-          +stack[stack.length - 1].value * 10 + +char;
-      } else stack.push({ type: TokenType.NUMBER, value: +char });
-
-      lastToken = TokenType.NUMBER;
+      //
+    } else if (/[\d.]/.test(char)) {
+      let num = char;
+      while (/[\d.]/.test(input[position + 1])) {
+        num += input[++position];
+      }
+      stack.push({ type: TokenType.NUMBER, value: String(parseFloat(num)) });
     } else if (Object.values(Op).includes(char as any)) {
       stack.push({ type: TokenType.OPERATOR, value: char as Op });
-      lastToken = TokenType.OPERATOR;
     } else if (char === Paren.OPEN) {
       stack.push({ type: TokenType.PAREN, value: Paren.OPEN });
       parens.push(Paren.OPEN);
-      lastToken = TokenType.PAREN;
     } else if (char === Paren.CLOSE) {
       if (parens.pop() !== Paren.OPEN) {
-        throw "brackets don't balance";
+        throw "Brackets don't balance";
       }
       stack.push({ type: TokenType.PAREN, value: Paren.CLOSE });
-      lastToken = TokenType.PAREN;
     } else {
       throw "Invalid character";
     }
@@ -61,7 +68,7 @@ export function lexer(input: string): Tokens {
   }
 
   if (parens.length) {
-    throw "brackets don't balance";
+    throw "Brackets don't balance";
   }
 
   return stack;
